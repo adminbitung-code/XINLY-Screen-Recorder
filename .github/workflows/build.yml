@@ -14,7 +14,7 @@ jobs:
         run: choco install mingw -y
       - name: Build
         shell: cmd
-        run: g++ -O2 -s -municode -mwindows main.cpp -o "XINLY Screen Recorder.exe" -luser32 -lgdi32 -lshell32
+        run: g++ -std=c++17  -O2 -s -municode -mwindows main.cpp -o "XINLY Screen Recorder.exe" -luser32 -lgdi32 -lshell32
       - name: Download FFmpeg
         shell: pwsh
         run: |
