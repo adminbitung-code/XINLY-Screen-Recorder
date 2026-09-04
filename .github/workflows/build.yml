@@ -1,0 +1,35 @@
+name: Build XINLY Screen Recorder V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MinGW
+        run: choco install mingw -y
+      - name: Build
+        shell: cmd
+        run: g++ -O2 -s -municode -mwindows main.cpp -o "XINLY Screen Recorder.exe" -luser32 -lgdi32 -lshell32
+      - name: Download FFmpeg
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile ff.zip
+          Expand-Archive ff.zip -DestinationPath ff_extract
+          $ff = Get-ChildItem ff_extract -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          Copy-Item $ff.FullName "./ffmpeg.exe"
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item "XINLY Screen Recorder.exe" package/
+          Copy-Item "ffmpeg.exe" package/
+          Compress-Archive -Path package/* -DestinationPath "XINLY-Screen-Recorder-V2-Windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XINLY-Screen-Recorder-V2-Windows
+          path: XINLY-Screen-Recorder-V2-Windows.zip
