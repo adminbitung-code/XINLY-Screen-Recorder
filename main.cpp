@@ -66,7 +66,7 @@ void startRec(HWND w){
  if(ar==2||ar==3) a+=L"-thread_queue_size 512 -f dshow -i audio=\"default\" ";
  a+=L"-vf scale=1280:720 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -b:v "+std::wstring(rates[br])+L" ";
  if(ar==0) a+=L"-an ";
- else if(ar==1) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 2 ";
+ else if(ar==1) a+=L"-map 0:v:0 -map 1:a:0? -c:a aac -b:a 128k -ar 48000 -ac 2 ";
  else if(ar==2) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 1 ";
  else a+=L"-map 0:v:0 -map 1:a:0 -map 2:a:0 -filter_complex \"[1:a][2:a]amix=inputs=2:duration=longest[a]\" -map \"[a]\" -c:a aac -b:a 128k -ar 48000 -ac 2 ";
  a+=L"-movflags +faststart -y \""+outputFile()+L"\"";
