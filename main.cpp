@@ -10,6 +10,7 @@ namespace fs=std::filesystem;
 
 static HWND hStatus,hStart,hPause,hStop,hQuality,hAudio,hBitrate;
 static PROCESS_INFORMATION pi{};
+static HANDLE hFFmpegInWrite=nullptr;
 static bool recording=false, paused=false;
 static std::chrono::steady_clock::time_point t0;
 static long long pausedSeconds=0;
@@ -29,15 +30,22 @@ void finishUI(){
 
 void stopRec(){
  if(!recording)return;
+ if(hFFmpegInWrite){
+  DWORD written=0;
+  const char q[]="q\n";
+  WriteFile(hFFmpegInWrite,q,2,&written,nullptr);
+  FlushFileBuffers(hFFmpegInWrite);
+  CloseHandle(hFFmpegInWrite);
+  hFFmpegInWrite=nullptr;
+ }
  if(pi.hProcess){
-   GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT,pi.dwProcessId);
-   if(WaitForSingleObject(pi.hProcess,5000)==WAIT_TIMEOUT){
-     TerminateProcess(pi.hProcess,0);
-     WaitForSingleObject(pi.hProcess,2000);
-   }
-   CloseHandle(pi.hProcess);
-   CloseHandle(pi.hThread);
-   pi={};
+  if(WaitForSingleObject(pi.hProcess,10000)==WAIT_TIMEOUT){
+   TerminateProcess(pi.hProcess,0);
+   WaitForSingleObject(pi.hProcess,2000);
+  }
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  pi={};
  }
  finishUI();
 }
@@ -63,11 +71,62 @@ void startRec(HWND w){
  else a+=L"-map 0:v:0 -map 1:a:0 -map 2:a:0 -filter_complex \"[1:a][2:a]amix=inputs=2:duration=longest[a]\" -map \"[a]\" -c:a aac -b:a 128k -ar 48000 -ac 2 ";
  a+=L"-movflags +faststart -y \""+outputFile()+L"\"";
 
- STARTUPINFOW si{};si.cb=sizeof(si);std::wstring cmd=a;
- if(!CreateProcessW(ff.c_str(),cmd.data(),nullptr,nullptr,FALSE,CREATE_NEW_PROCESS_GROUP|CREATE_NO_WINDOW,nullptr,appdir().c_str(),&si,&pi)){
-  MessageBoxW(w,L"Gagal menjalankan FFmpeg. Pastikan FFmpeg mendukung gdigrab/wasapi/libx264 -preset ultrafast -pix_fmt yuv420p.",L"XINLY Screen Recorder",MB_ICONERROR);return;
- }
- recording=true;paused=false;pausedSeconds=0;t0=std::chrono::steady_clock::now();
+ STARTUPINFOW si{};
+  si.cb=sizeof(si);
+  SECURITY_ATTRIBUTES sa{};
+  sa.nLength=sizeof(sa);
+  sa.bInheritHandle=TRUE;
+
+  HANDLE inR=nullptr;
+
+  if(!CreatePipe(&inR,&hFFmpegInWrite,&sa,0)){
+   MessageBoxW(w,L"Gagal membuat komunikasi dengan FFmpeg.",L"XINLY Screen Recorder",MB_ICONERROR);
+   return;
+  }
+
+  SetHandleInformation(hFFmpegInWrite,HANDLE_FLAG_INHERIT,0);
+
+  HANDLE hNul=CreateFileW(
+   L"NUL",
+   GENERIC_WRITE,
+   FILE_SHARE_READ|FILE_SHARE_WRITE,
+   &sa,
+   OPEN_EXISTING,
+   FILE_ATTRIBUTE_NORMAL,
+   nullptr
+  );
+
+  si.dwFlags=STARTF_USESTDHANDLES;
+  si.hStdInput=inR;
+  si.hStdOutput=hNul;
+  si.hStdError=hNul;
+
+  std::wstring cmd=a;
+
+  if(!CreateProcessW(
+   ff.c_str(),
+   cmd.data(),
+   nullptr,
+   nullptr,
+   TRUE,
+   CREATE_NEW_PROCESS_GROUP|CREATE_NO_WINDOW,
+   nullptr,
+   appdir().c_str(),
+   &si,
+   &pi
+  )){
+   CloseHandle(inR);
+   CloseHandle(hFFmpegInWrite);
+   hFFmpegInWrite=nullptr;
+   if(hNul!=INVALID_HANDLE_VALUE)CloseHandle(hNul);
+   MessageBoxW(w,L"Gagal menjalankan FFmpeg. Pastikan FFmpeg mendukung gdigrab dan libx264.",L"XINLY Screen Recorder",MB_ICONERROR);
+   return;
+  }
+
+  CloseHandle(inR);
+  if(hNul!=INVALID_HANDLE_VALUE)CloseHandle(hNul);
+
+  recording=true;paused=false;pausedSeconds=0;t0=std::chrono::steady_clock::now();
  EnableWindow(hStart,FALSE);EnableWindow(hPause,TRUE);EnableWindow(hStop,TRUE);
  EnableWindow(hQuality,FALSE);EnableWindow(hAudio,FALSE);EnableWindow(hBitrate,FALSE);
  status(L"RECORDING • F9 STOP • F10 PAUSE");
