@@ -86,7 +86,7 @@ void togglePause(){
  }
 }
 
-LRESULT CALLBACK W(HWND w,UINT m,WPARAM p,LPARAM){
+LRESULT CALLBACK W(HWND w,UINT m,WPARAM p,LPARAM l){
  switch(m){
  case WM_CREATE:{
   HFONT f=(HFONT)GetStockObject(DEFAULT_GUI_FONT);
