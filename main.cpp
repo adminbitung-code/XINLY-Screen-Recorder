@@ -86,15 +86,16 @@ void startRec(HWND w){
 
   SetHandleInformation(hFFmpegInWrite,HANDLE_FLAG_INHERIT,0);
 
-  HANDLE hNul=CreateFileW(
-   L"NUL",
-   GENERIC_WRITE,
-   FILE_SHARE_READ|FILE_SHARE_WRITE,
-   &sa,
-   OPEN_EXISTING,
-   FILE_ATTRIBUTE_NORMAL,
-   nullptr
-  );
+  std::wstring logFile=appdir()+L"\\ffmpeg.log";
+    HANDLE hNul=CreateFileW(
+     logFile.c_str(),
+     GENERIC_WRITE,
+     FILE_SHARE_READ|FILE_SHARE_WRITE,
+     &sa,
+     CREATE_ALWAYS,
+     FILE_ATTRIBUTE_NORMAL,
+     nullptr
+    );
 
   si.dwFlags=STARTF_USESTDHANDLES;
   si.hStdInput=inR;
@@ -167,6 +168,9 @@ LRESULT CALLBACK W(HWND w,UINT m,WPARAM p,LPARAM l){
   hStatus=CreateWindowW(L"STATIC",L"READY",WS_CHILD|WS_VISIBLE,30,190,400,45,w,0,0,0);
   for(HWND x:{hQuality,hAudio,hBitrate,hStart,hPause,hStop,hStatus})SendMessageW(x,WM_SETFONT,(WPARAM)f,1);
   SetTimer(w,1,500,0);break;}
+ case WM_SIZE:
+ if(p==SIZE_MINIMIZED)return 0;
+ break;
  case WM_COMMAND:if(LOWORD(p)==1)startRec(w);else if(LOWORD(p)==2)togglePause();else if(LOWORD(p)==6)stopRec();break;
  case WM_KEYDOWN:if(p==VK_F9){if(recording)stopRec();else startRec(w);}else if(p==VK_F10)togglePause();break;
  case WM_TIMER:if(recording&&!paused){auto s=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now()-t0).count()-pausedSeconds;wchar_t b[90];swprintf(b,90,L"RECORDING • %02lld:%02lld:%02lld • F9 STOP • F10 PAUSE",s/3600,(s/60)%60,s%60);status(b);}break;
