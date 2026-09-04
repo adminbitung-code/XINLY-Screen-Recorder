@@ -56,7 +56,7 @@ void startRec(HWND w){
  // Audio modes: 0 Off, 1 Internal, 2 Microphone, 3 Both.
  if(ar==1||ar==3) a+=L"-thread_queue_size 512 -f wasapi -i default ";
  if(ar==2||ar==3) a+=L"-thread_queue_size 512 -f dshow -i audio=\"default\" ";
- a+=L"-c:v libx264 -preset ultrafast -pix_fmt yuv420p -b:v "+rates[br]+L" -maxrate "+rates[br]+L" -bufsize "+rates[br]+L" ";
+ a+=L"-c:v libx264 -preset ultrafast -pix_fmt yuv420p -b:v "+std::wstring(rates[br])+L" -maxrate "+std::wstring(rates[br])+L" -bufsize "+std::wstring(rates[br])+L" ";
  if(ar==0) a+=L"-an ";
  else if(ar==1) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 2 ";
  else if(ar==2) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 1 ";
