@@ -62,7 +62,7 @@ void startRec(HWND w){
  const wchar_t* rates[]={L"2M",L"4M",L"6M"};
  std::wstring a=L"ffmpeg.exe -hide_banner -loglevel error -thread_queue_size 512 -f gdigrab -framerate 30 -draw_mouse 1 -i desktop ";
  // Audio modes: 0 Off, 1 Internal, 2 Microphone, 3 Both.
- if(ar==1||ar==3) a+=L"-thread_queue_size 512 -f wasapi -i default ";
+ if(ar==1||ar==3) a+=L"-thread_queue_size 512 -f wasapi -loopback 1 -i default ";
  if(ar==2||ar==3) a+=L"-thread_queue_size 512 -f dshow -i audio=\"default\" ";
  a+=L"-vf scale=1280:720 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -b:v "+std::wstring(rates[br])+L" ";
  if(ar==0) a+=L"-an ";
