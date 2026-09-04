@@ -1,6 +1,7 @@
 #define UNICODE
 #define _UNICODE
 #include <windows.h>
+#include <shlobj.h>
 #include <shellapi.h>
 #include <filesystem>
 #include <chrono>
