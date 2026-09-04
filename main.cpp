@@ -31,9 +31,13 @@ void stopRec(){
  if(!recording)return;
  if(pi.hProcess){
    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT,pi.dwProcessId);
-   WaitForSingleObject(pi.hProcess,2000);
-   if(WaitForSingleObject(pi.hProcess,0)==WAIT_TIMEOUT)TerminateProcess(pi.hProcess,0);
-   CloseHandle(pi.hProcess);CloseHandle(pi.hThread);pi={};
+   if(WaitForSingleObject(pi.hProcess,5000)==WAIT_TIMEOUT){
+     TerminateProcess(pi.hProcess,0);
+     WaitForSingleObject(pi.hProcess,2000);
+   }
+   CloseHandle(pi.hProcess);
+   CloseHandle(pi.hThread);
+   pi={};
  }
  finishUI();
 }
@@ -48,12 +52,11 @@ void startRec(HWND w){
  int ar=SendMessageW(hAudio,CB_GETCURSEL,0,0);
  int br=SendMessageW(hBitrate,CB_GETCURSEL,0,0);
  const wchar_t* rates[]={L"2M",L"4M",L"6M"};
- std::wstring vf=hd?L"scale=1920:1080:force_original_aspect_ratio=decrease":L"scale=1280:720:force_original_aspect_ratio=decrease";
  std::wstring a=L"ffmpeg.exe -hide_banner -loglevel error -thread_queue_size 512 -f gdigrab -framerate 30 -draw_mouse 1 -i desktop ";
  // Audio modes: 0 Off, 1 Internal, 2 Microphone, 3 Both.
  if(ar==1||ar==3) a+=L"-thread_queue_size 512 -f wasapi -i default ";
  if(ar==2||ar==3) a+=L"-thread_queue_size 512 -f dshow -i audio=\"default\" ";
- a+=L"-vf \""+vf+L",pad=ceil(iw/2)*2:ceil(ih/2)*2\" -c:v h264_qsv -b:v "+rates[br]+L" -maxrate "+rates[br]+L" -bufsize "+rates[br]+L" ";
+ a+=L"-c:v libx264 -preset ultrafast -pix_fmt yuv420p -b:v "+rates[br]+L" -maxrate "+rates[br]+L" -bufsize "+rates[br]+L" ";
  if(ar==0) a+=L"-an ";
  else if(ar==1) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 2 ";
  else if(ar==2) a+=L"-map 0:v:0 -map 1:a:0 -c:a aac -b:a 128k -ar 48000 -ac 1 ";
@@ -62,7 +65,7 @@ void startRec(HWND w){
 
  STARTUPINFOW si{};si.cb=sizeof(si);std::wstring cmd=a;
  if(!CreateProcessW(ff.c_str(),cmd.data(),nullptr,nullptr,FALSE,CREATE_NEW_PROCESS_GROUP|CREATE_NO_WINDOW,nullptr,appdir().c_str(),&si,&pi)){
-  MessageBoxW(w,L"Gagal menjalankan FFmpeg. Pastikan FFmpeg mendukung gdigrab/wasapi/h264_qsv.",L"XINLY Screen Recorder",MB_ICONERROR);return;
+  MessageBoxW(w,L"Gagal menjalankan FFmpeg. Pastikan FFmpeg mendukung gdigrab/wasapi/libx264 -preset ultrafast -pix_fmt yuv420p.",L"XINLY Screen Recorder",MB_ICONERROR);return;
  }
  recording=true;paused=false;pausedSeconds=0;t0=std::chrono::steady_clock::now();
  EnableWindow(hStart,FALSE);EnableWindow(hPause,TRUE);EnableWindow(hStop,TRUE);
@@ -113,6 +116,6 @@ LRESULT CALLBACK W(HWND w,UINT m,WPARAM p,LPARAM l){
 }
 int WINAPI wWinMain(HINSTANCE h,HINSTANCE,PWSTR,int n){
  WNDCLASSW c{};c.lpfnWndProc=W;c.hInstance=h;c.lpszClassName=L"XINLYRecorderV2";c.hCursor=LoadCursor(0,IDC_ARROW);c.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);RegisterClassW(&c);
- HWND w=CreateWindowW(c.lpszClassName,L"XINLY Screen Recorder",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU,300,200,470,275,0,0,h,0);
+ HWND w=CreateWindowW(c.lpszClassName,L"XINLY Screen Recorder",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX,300,200,470,275,0,0,h,0);
  ShowWindow(w,n);MSG m;while(GetMessageW(&m,0,0,0)>0){TranslateMessage(&m);DispatchMessageW(&m);}return 0;
 }
